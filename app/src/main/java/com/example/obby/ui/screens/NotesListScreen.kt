@@ -37,7 +37,8 @@ import java.util.*
 fun NotesListScreen(
     repository: NoteRepository,
     onNoteClick: (Long) -> Unit,
-    onGraphClick: () -> Unit
+    onGraphClick: () -> Unit,
+    onSettingsClick: () -> Unit = {}
 ) {
     val viewModel = remember { NotesViewModel(repository) }
     val notes by viewModel.notes.collectAsState()
@@ -88,7 +89,8 @@ fun NotesListScreen(
                         viewModel.setViewMode(mode)
                         scope.launch { drawerState.close() }
                     },
-                    onCreateFolder = { showCreateFolderDialog = true }
+                    onCreateFolder = { showCreateFolderDialog = true },
+                    onSettingsClick = { onSettingsClick() }
                 )
             }
         }
@@ -730,6 +732,7 @@ fun DrawerContent(
     onTagClick: (Long?) -> Unit,
     onViewModeChange: (NotesViewModel.ViewMode) -> Unit,
     onCreateFolder: () -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.padding(16.dp)) {
@@ -802,6 +805,19 @@ fun DrawerContent(
                 icon = { Icon(Icons.Default.Tag, null) }
             )
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Divider()
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text("Settings", style = MaterialTheme.typography.titleSmall)
+
+        NavigationDrawerItem(
+            label = { Text("Settings") },
+            selected = false,
+            onClick = onSettingsClick,
+            icon = { Icon(Icons.Default.Settings, null) }
+        )
     }
 }
 

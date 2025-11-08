@@ -266,9 +266,14 @@ fun NoteDetailScreen(
                     }
                 }
             )
-        },
-        bottomBar = {
-            // Show toolbar only in edit mode and not in preview
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Show toolbar at the top in edit mode and not in preview
             if (editMode && !showMarkdownPreview) {
                 MarkdownToolbar(
                     onAction = { action ->
@@ -286,144 +291,144 @@ fun NoteDetailScreen(
                     }
                 )
             }
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            if (note == null) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            } else {
-                if (editMode) {
-                    if (showMarkdownPreview) {
-                        // Preview mode in editor
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(rememberScrollState())
-                                .padding(16.dp)
-                        ) {
-                            MarkdownPreview(
-                                markdown = contentFieldValue.text,
-                                modifier = Modifier.fillMaxWidth()
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f)
+            ) {
+                if (note == null) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                } else {
+                    if (editMode) {
+                        if (showMarkdownPreview) {
+                            // Preview mode in editor
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(16.dp)
+                            ) {
+                                MarkdownPreview(
+                                    markdown = contentFieldValue.text,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        } else {
+                            // Edit mode
+                            BasicTextField(
+                                value = contentFieldValue,
+                                onValueChange = { newValue ->
+                                    contentFieldValue = newValue
+                                    viewModel.onContentChange(titleFieldValue.text, newValue.text)
+                                    viewModel.updateTextSelection(newValue.selection)
+                                },
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
+                                ),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                decorationBox = { innerTextField ->
+                                    Box {
+                                        if (contentFieldValue.text.isEmpty()) {
+                                            Text(
+                                                "Start writing your note...",
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                    alpha = 0.6f
+                                                )
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                }
                             )
                         }
                     } else {
-                        // Edit mode
-                        BasicTextField(
-                            value = contentFieldValue,
-                            onValueChange = { newValue ->
-                                contentFieldValue = newValue
-                                viewModel.onContentChange(titleFieldValue.text, newValue.text)
-                                viewModel.updateTextSelection(newValue.selection)
-                            },
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
-                            ),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            decorationBox = { innerTextField ->
-                                Box {
-                                    if (contentFieldValue.text.isEmpty()) {
-                                        Text(
-                                            "Start writing your note...",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                alpha = 0.6f
-                                            )
-                                        )
-                                    }
-                                    innerTextField()
-                                }
-                            }
-                        )
-                    }
-                } else {
-                    // View mode
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp)
-                    ) {
-                        item {
-                            if (note?.content?.isNotBlank() == true) {
-                                MarkdownPreview(
-                                    markdown = note!!.content,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            } else {
-                                Text(
-                                    text = "No content",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(24.dp))
-                            
-                            if (tags.isNotEmpty()) {
-                                Text(
-                                    "Tags",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    tags.forEach { tag ->
-                                        SuggestionChip(
-                                            onClick = { },
-                                            label = { Text("#${tag.name}") }
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-                            
-                            if (linkedNotes.isNotEmpty()) {
-                                Divider()
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    "Linked Notes",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
-                            }
-                        }
-                        
-                        items(linkedNotes) { linkedNote ->
-                            LinkCard(
-                                note = linkedNote,
-                                onClick = { onNoteClick(linkedNote.id) }
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-                        
-                        if (backlinks.isNotEmpty()) {
+                        // View mode
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp)
+                        ) {
                             item {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Divider()
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    "Backlinks (${backlinks.size})",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
+                                if (note?.content?.isNotBlank() == true) {
+                                    MarkdownPreview(
+                                        markdown = note!!.content,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                } else {
+                                    Text(
+                                        text = "No content",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                if (tags.isNotEmpty()) {
+                                    Text(
+                                        "Tags",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        tags.forEach { tag ->
+                                            SuggestionChip(
+                                                onClick = { },
+                                                label = { Text("#${tag.name}") }
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+
+                                if (linkedNotes.isNotEmpty()) {
+                                    Divider()
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        "Linked Notes",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+                                }
                             }
-                            
-                            items(backlinks) { backlink ->
+
+                            items(linkedNotes) { linkedNote ->
                                 LinkCard(
-                                    note = backlink,
-                                    onClick = { onNoteClick(backlink.id) }
+                                    note = linkedNote,
+                                    onClick = { onNoteClick(linkedNote.id) }
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
+                            }
+
+                            if (backlinks.isNotEmpty()) {
+                                item {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Divider()
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        "Backlinks (${backlinks.size})",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+                                }
+
+                                items(backlinks) { backlink ->
+                                    LinkCard(
+                                        note = backlink,
+                                        onClick = { onNoteClick(backlink.id) }
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
                             }
                         }
                     }

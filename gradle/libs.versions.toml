@@ -15,6 +15,7 @@ markwon = "4.6.2"
 datastore = "1.1.1"
 securityCrypto = "1.1.0-alpha06"
 coroutines = "1.8.1"
+documentfile = "1.0.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -54,6 +55,9 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 
 # Security/Encryption
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+
+# DocumentFile
+androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 
 # Coroutines
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }

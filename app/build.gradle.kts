@@ -87,6 +87,9 @@ dependencies {
     // Security
     implementation(libs.androidx.security.crypto)
 
+    // DocumentFile
+    implementation(libs.androidx.documentfile)
+
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
