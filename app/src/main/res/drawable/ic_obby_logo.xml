@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background circle -->
+    <path
+        android:fillColor="#9C89B8"
+        android:pathData="M54,54m-50,0a50,50 0,1 1,100 0a50,50 0,1 1,-100 0" />
+
+    <!-- Stylized "O" letter -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 C41.8,28 32,37.8 32,50 C32,62.2 41.8,72 54,72 C66.2,72 76,62.2 76,50 C76,37.8 66.2,28 54,28 Z M54,64 C46.3,64 40,57.7 40,50 C40,42.3 46.3,36 54,36 C61.7,36 68,42.3 68,50 C68,57.7 61.7,64 54,64 Z" />
+
+    <!-- Inner circle accent -->
+    <path
+        android:fillColor="#BDE0FE"
+        android:pathData="M54,42 C50.7,42 48,44.7 48,48 C48,51.3 50.7,54 54,54 C57.3,54 60,51.3 60,48 C60,44.7 57.3,42 54,42 Z" />
+
+    <!-- Bottom accent dot -->
+    <path
+        android:fillColor="#CDB4DB"
+        android:pathData="M54,56 C52.3,56 51,57.3 51,59 C51,60.7 52.3,62 54,62 C55.7,62 57,60.7 57,59 C57,57.3 55.7,56 54,56 Z" />
+</vector>
