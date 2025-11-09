@@ -8,9 +8,9 @@ val ObbyPurpleLight = Color(0xFFCDB4DB)
 val ObbyBlue = Color(0xFFBDE0FE)
 val ObbyPink = Color(0xFFF7AEF8)
 
-// Dark theme colors
-val DarkBackground = Color(0xFF121212)
-val DarkSurface = Color(0xFF1E1E1E)
+// Dark theme colors - Updated to match the design
+val DarkBackground = Color(0xFF1A202C) // Darker background to match HTML mockup
+val DarkSurface = Color(0xFF2D3748) // Card color
 val DarkSurfaceVariant = Color(0xFF2A2A2A)
 val DarkOnBackground = Color(0xFFE8E6E3)
 val DarkOnSurface = Color(0xFFE8E6E3)

@@ -8,6 +8,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -15,6 +17,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.obby.data.repository.NoteRepository
 import com.example.obby.ui.viewmodel.SettingsViewModel
@@ -35,6 +39,7 @@ fun SettingsScreen(
 
     var showRestoreConfirmDialog by remember { mutableStateOf(false) }
     var selectedBackupUri by remember { mutableStateOf<Uri?>(null) }
+    var showMarkdownGuide by remember { mutableStateOf(false) }
 
     // Backup folder picker launcher
     val backupFolderLauncher = rememberLauncherForActivityResult(
@@ -143,7 +148,7 @@ fun SettingsScreen(
                 SettingItem(
                     icon = Icons.Default.Info,
                     title = "Version",
-                    subtitle = "Obby v1.0.0",
+                    subtitle = "Obby v1.0 (1)", // hardcoded version information
                     onClick = {}
                 )
             }
@@ -153,7 +158,9 @@ fun SettingsScreen(
                     icon = Icons.Default.Description,
                     title = "Markdown Guide",
                     subtitle = "Learn how to format your notes",
-                    onClick = {}
+                    onClick = {
+                        showMarkdownGuide = true
+                    }
                 )
             }
         }
@@ -222,6 +229,13 @@ fun SettingsScreen(
             }
         )
     }
+
+    // Markdown Guide Dialog
+    if (showMarkdownGuide) {
+        MarkdownGuideDialog(
+            onDismiss = { showMarkdownGuide = false }
+        )
+    }
 }
 
 @Composable
@@ -276,6 +290,157 @@ fun SettingItem(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(24.dp)
             )
+        }
+    }
+}
+
+@Composable
+fun MarkdownGuideDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Markdown Guide",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                MarkdownSection(
+                    title = "Headers",
+                    examples = listOf(
+                        "# Heading 1",
+                        "## Heading 2",
+                        "### Heading 3"
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                MarkdownSection(
+                    title = "Text Formatting",
+                    examples = listOf(
+                        "**Bold text**",
+                        "*Italic text*",
+                        "~~Strikethrough~~",
+                        "`Inline code`"
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                MarkdownSection(
+                    title = "Lists",
+                    examples = listOf(
+                        "- Unordered item",
+                        "- Another item",
+                        "",
+                        "1. Ordered item",
+                        "2. Second item"
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                MarkdownSection(
+                    title = "Task Lists",
+                    examples = listOf(
+                        "- [ ] Unchecked task",
+                        "- [x] Checked task"
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                MarkdownSection(
+                    title = "Links & Notes",
+                    examples = listOf(
+                        "[Link Text](https://example.com)",
+                        "[[Note Title]] - Link to another note"
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                MarkdownSection(
+                    title = "Tags",
+                    examples = listOf(
+                        "#tag - Add tags to organize notes",
+                        "#work #personal"
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                MarkdownSection(
+                    title = "Code Blocks",
+                    examples = listOf(
+                        "```",
+                        "Code block",
+                        "Multiple lines",
+                        "```"
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                MarkdownSection(
+                    title = "Quotes",
+                    examples = listOf(
+                        "> This is a quote",
+                        "> Multiple lines"
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                MarkdownSection(
+                    title = "Tables",
+                    examples = listOf(
+                        "| Header 1 | Header 2 |",
+                        "| -------- | -------- |",
+                        "| Cell 1   | Cell 2   |"
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Got it")
+            }
+        }
+    )
+}
+
+@Composable
+fun MarkdownSection(
+    title: String,
+    examples: List<String>
+) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        examples.forEach { example ->
+            if (example.isEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+            } else {
+                Text(
+                    text = example,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                )
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.example.obby.ui.screens
 
 import android.content.Intent
+import android.widget.TextView
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -9,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,10 +26,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.example.obby.data.local.entity.Folder
 import com.example.obby.data.local.entity.Note
 import com.example.obby.data.repository.NoteRepository
 import com.example.obby.ui.viewmodel.NotesViewModel
+import io.noties.markwon.AbstractMarkwonPlugin
+import io.noties.markwon.Markwon
+import io.noties.markwon.core.MarkwonTheme
+import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
+import io.noties.markwon.ext.tables.TablePlugin
+import io.noties.markwon.ext.tasklist.TaskListPlugin
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -406,7 +415,7 @@ fun NoteListItem(
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
     val elevation by animateDpAsState(
-        targetValue = if (isSelected) 8.dp else 1.dp,
+        targetValue = if (isSelected) 8.dp else 2.dp,
         animationSpec = spring(),
         label = "elevation"
     )
@@ -437,120 +446,55 @@ fun NoteListItem(
         ),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
             else
-                MaterialTheme.colorScheme.surface
-        )
+                Color(0xFF2D3748) // Dark card background
+        ),
+        shape = MaterialTheme.shapes.medium
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
+            // Header: Title and Menu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (isMultiSelectMode) {
-                            Checkbox(
-                                checked = isSelected,
-                                onCheckedChange = null,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-
-                        if (note.isPinned) {
-                            Icon(
-                                Icons.Default.PushPin,
-                                contentDescription = "Pinned",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                        }
-                        if (note.isFavorite) {
-                            Icon(
-                                Icons.Default.Favorite,
-                                contentDescription = "Favorite",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                        }
-                        if (note.isEncrypted) {
-                            Icon(
-                                Icons.Default.Lock,
-                                contentDescription = "Encrypted",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.tertiary
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                        }
-
-                        Text(
-                            text = note.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isMultiSelectMode) {
+                        Checkbox(
+                            checked = isSelected,
+                            onCheckedChange = null,
+                            modifier = Modifier.size(24.dp)
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
                     }
-                    
-                    Spacer(modifier = Modifier.height(4.dp))
 
-                    if (note.content.isNotBlank()) {
-                        Text(
-                            text = note.content,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (note.folderId != null) {
-                            val folderName = folders.find { it.id == note.folderId }?.name
-                            if (folderName != null) {
-                                SuggestionChip(
-                                    onClick = {},
-                                    label = {
-                                        Text(
-                                            folderName,
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                    },
-                                    icon = {
-                                        Icon(
-                                            Icons.Default.Folder,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                    }
-                                )
-                            }
-                        }
-
-                        Text(
-                            text = dateFormat.format(Date(note.modifiedAt)),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = note.title,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize * 1.05f
+                        ),
+                        color = Color(0xFFE2E8F0), // Light gray text
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
                 if (!isMultiSelectMode) {
                     Box {
                         IconButton(onClick = { showContextMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = "More",
+                                tint = Color(0xFFA0AEC0) // Medium gray for icon
+                            )
                         }
 
                         NoteContextMenu(
@@ -588,6 +532,122 @@ fun NoteListItem(
                         )
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Content Section
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Content",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color(0xFFA0AEC0), // Medium gray label
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+
+                // Content preview in a box styled like an input field
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = Color(0xFF1A202C), // Darker background for content
+                            shape = MaterialTheme.shapes.small
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = Color(0xFF4A5568), // Border color
+                            shape = MaterialTheme.shapes.small
+                        )
+                        .padding(10.dp)
+                ) {
+                    if (note.content.isNotBlank()) {
+                        Text(
+                            text = note.content,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFFE2E8F0), // Light gray text
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    } else {
+                        Text(
+                            text = "No content",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF718096), // Dimmer gray for placeholder
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Footer: Date and badges
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Badges and folder
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (note.isPinned) {
+                        Icon(
+                            Icons.Default.PushPin,
+                            contentDescription = "Pinned",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    if (note.isFavorite) {
+                        Icon(
+                            Icons.Default.Favorite,
+                            contentDescription = "Favorite",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    if (note.isEncrypted) {
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = "Encrypted",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+
+                    if (note.folderId != null) {
+                        val folderName = folders.find { it.id == note.folderId }?.name
+                        if (folderName != null) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Folder,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = Color(0xFF718096)
+                                )
+                                Text(
+                                    text = folderName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF718096)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Date
+                Text(
+                    text = dateFormat.format(Date(note.modifiedAt)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF718096) // Gray text for date
+                )
             }
         }
     }
@@ -1075,4 +1135,44 @@ private fun shareNote(context: android.content.Context, content: String) {
         putExtra(Intent.EXTRA_TEXT, content)
     }
     context.startActivity(Intent.createChooser(shareIntent, "Share Note"))
+}
+
+@Composable
+fun MarkdownListPreview(
+    markdown: String,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val isDarkTheme = isSystemInDarkTheme()
+
+    val textColor = if (isDarkTheme) {
+        android.graphics.Color.parseColor("#E8E6E3")
+    } else {
+        android.graphics.Color.parseColor("#1C1B1F")
+    }
+
+    val markwon = remember(isDarkTheme) {
+        Markwon.builder(context)
+            .usePlugin(StrikethroughPlugin.create())
+            .usePlugin(TablePlugin.create(context))
+            .usePlugin(TaskListPlugin.create(context))
+            .build()
+    }
+
+    AndroidView(
+        modifier = modifier.heightIn(max = 48.dp),
+        factory = { ctx ->
+            TextView(ctx).apply {
+                this.textSize = 14f
+                setTextColor(textColor)
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding(0, 0, 0, 0)
+            }
+        },
+        update = { textView ->
+            textView.setTextColor(textColor)
+            markwon.setMarkdown(textView, markdown)
+        }
+    )
 }
