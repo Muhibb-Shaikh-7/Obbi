@@ -321,16 +321,55 @@ fun NoteDetailScreen(
                             BasicTextField(
                                 value = contentFieldValue,
                                 onValueChange = { newValue ->
-                                    contentFieldValue = newValue
-                                    viewModel.onContentChange(titleFieldValue.text, newValue.text)
-                                    viewModel.updateTextSelection(newValue.selection)
+                                    // Check if Enter key was just pressed (not paste or other operations)
+                                    val oldText = contentFieldValue.text
+                                    val newText = newValue.text
+                                    val oldCursor = contentFieldValue.selection.start
+                                    val newCursor = newValue.selection.start
+
+                                    // More precise detection: Enter was pressed if:
+                                    // 1. Exactly one character was added
+                                    // 2. That character is a newline
+                                    // 3. It was added at the old cursor position
+                                    // 4. The cursor moved by exactly 1 position
+                                    val lengthDiff = newText.length - oldText.length
+                                    val isEnterPressed = lengthDiff == 1 &&
+                                            newCursor == oldCursor + 1 &&
+                                            newText.length > oldCursor &&
+                                            newText[oldCursor] == '\n'
+
+                                    if (isEnterPressed) {
+                                        // Apply auto-continuation logic
+                                        val (processedText, newCursorPos) = MarkdownFormatter.handleEnterKey(
+                                            currentText = newText,
+                                            cursorPosition = newCursor
+                                        )
+
+                                        contentFieldValue = TextFieldValue(
+                                            text = processedText,
+                                            selection = TextRange(newCursorPos)
+                                        )
+                                        viewModel.onContentChange(
+                                            titleFieldValue.text,
+                                            processedText
+                                        )
+                                        viewModel.updateTextSelection(TextRange(newCursorPos))
+                                    } else {
+                                        // Normal text change (typing, paste, delete, etc.)
+                                        contentFieldValue = newValue
+                                        viewModel.onContentChange(
+                                            titleFieldValue.text,
+                                            newValue.text
+                                        )
+                                        viewModel.updateTextSelection(newValue.selection)
+                                    }
                                 },
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(16.dp),
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
+                                    lineHeight = MaterialTheme.typography.bodyLarge.fontSize * 0.2
                                 ),
                                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                 decorationBox = { innerTextField ->
@@ -612,7 +651,7 @@ fun MarkdownPreview(
                 setTextIsSelectable(true)
                 setTextColor(textColor)
                 textSize = 16f
-                setLineSpacing(4f, 1.3f) // Extra space, multiplier
+                setLineSpacing(0f, 0.7f)
                 // Increase touch padding for better checkbox accessibility
                 setPadding(0, 8, 0, 8) // Add vertical padding for easier tapping
                 layoutParams = android.view.ViewGroup.LayoutParams(

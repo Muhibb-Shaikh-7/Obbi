@@ -5,14 +5,41 @@
     <string name="widget_description">Show recent notes from Obbi</string>
     <string name="quick_add_widget_description">Quick add note button</string>
 
-    <!-- Hidden Notes -->
-    <string name="hidden_notes_unlock_title">Hidden Notes</string>
-    <string name="hidden_notes_setup_title">Set Up Hidden Notes</string>
+    <!-- Private Notes (formerly Hidden Notes) -->
+    <string name="private_notes_title">Private</string>
+    <string name="private_notes_unlock_title">Unlock Private</string>
+    <string name="private_notes_setup_title">Set Private Password</string>
+    <string name="private_notes_unlock_button">Unlock</string>
+    <string name="private_notes_setup_button">Set Up</string>
+    <string name="private_notes_locked">Private notes are locked</string>
+    <string name="private_unlock_message">Enter your Private password</string>
+
+    <!-- Password Settings -->
+    <string name="settings_privacy_section">Privacy</string>
+    <string name="settings_set_private_password">Set Private Password</string>
+    <string name="settings_change_private_password">Change Private Password</string>
+    <string name="settings_remove_private_password">Remove Private Password</string>
+    <string name="settings_private_password_subtitle">Protect your private notes with a password</string>
+
+    <!-- Password Errors and Warnings -->
+    <string name="error_incorrect_password">Incorrect password</string>
+    <string name="warning_no_recovery">There is no password recovery. Keep your password safe.</string>
+    <string name="password_changed_success">Password changed successfully</string>
+    <string name="password_set_success">Password set successfully</string>
+    <string name="password_removed_success">Password removed successfully</string>
+
+    <!-- Migration -->
+    <string name="migration_emoji_to_password_title">Private Notes Now Use Password</string>
+    <string name="migration_emoji_to_password_message">Private Notes now use a password for better security. Please set a password to continue accessing your private notes.</string>
+
+    <!-- Backward compatibility aliases (deprecated) -->
+    <string name="hidden_notes_unlock_title">@string/private_notes_unlock_title</string>
+    <string name="hidden_notes_setup_title">@string/private_notes_setup_title</string>
     <string name="hidden_notes_emoji_pin_hint">Enter 4-emoji PIN</string>
     <string name="hidden_notes_category_alias">Category Alias</string>
     <string name="hidden_notes_category_alias_hint">e.g., Recipes, Shopping</string>
-    <string name="hidden_notes_unlock_button">Unlock</string>
-    <string name="hidden_notes_setup_button">Set Up</string>
-    <string name="hidden_notes_locked">Hidden notes are locked</string>
+    <string name="hidden_notes_unlock_button">@string/private_notes_unlock_button</string>
+    <string name="hidden_notes_setup_button">@string/private_notes_setup_button</string>
+    <string name="hidden_notes_locked">@string/private_notes_locked</string>
     <string name="hidden_notes_invalid_pin">Invalid PIN</string>
 </resources>

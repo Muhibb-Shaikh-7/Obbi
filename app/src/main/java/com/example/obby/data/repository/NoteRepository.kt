@@ -25,16 +25,16 @@ class NoteRepository(
     fun getAllNotes(): Flow<List<Note>> = noteDao.getAllNotes()
 
     /**
-     * Get all notes excluding hidden ones (for main view)
+     * Get all notes excluding private ones (for main view)
      */
-    fun getAllNotesExcludingHidden(): Flow<List<Note>> =
-        noteDao.getAllNotes().map { notes -> notes.filter { !it.isHidden } }
+    fun getAllNotesExcludingPrivate(): Flow<List<Note>> =
+        noteDao.getAllNotes().map { notes -> notes.filter { !it.isActuallyPrivate } }
 
     /**
-     * Get only hidden notes (when unlocked)
+     * Get only private notes (when unlocked)
      */
-    fun getHiddenNotes(): Flow<List<Note>> =
-        noteDao.getAllNotes().map { notes -> notes.filter { it.isHidden } }
+    fun getPrivateNotes(): Flow<List<Note>> =
+        noteDao.getAllNotes().map { notes -> notes.filter { it.isActuallyPrivate } }
 
     fun getNoteById(noteId: Long): Flow<Note?> = noteDao.getNoteByIdFlow(noteId)
 
@@ -105,28 +105,30 @@ class NoteRepository(
     }
 
     /**
-     * Toggle hidden status of a note
+     * Toggle private status of a note
      */
-    suspend fun toggleHideNote(noteId: Long, categoryAlias: String = "Recipes") {
+    suspend fun togglePrivateNote(noteId: Long, categoryAlias: String = "Recipes") {
         val note = noteDao.getNoteById(noteId) ?: return
         noteDao.updateNote(
             note.copy(
-                isHidden = !note.isHidden,
-                hiddenCategoryAlias = if (!note.isHidden) categoryAlias else null
+                isPrivate = !note.isActuallyPrivate,
+                isHidden = false, // Clear old field
+                hiddenCategoryAlias = if (!note.isActuallyPrivate) categoryAlias else null
             )
         )
     }
 
     /**
-     * Hide multiple notes at once
+     * Mark multiple notes as private at once
      */
-    suspend fun hideNotes(noteIds: List<Long>, categoryAlias: String = "Recipes") {
+    suspend fun markNotesAsPrivate(noteIds: List<Long>, categoryAlias: String = "Recipes") {
         noteIds.forEach { noteId ->
             val note = noteDao.getNoteById(noteId) ?: return@forEach
-            if (!note.isHidden) {
+            if (!note.isActuallyPrivate) {
                 noteDao.updateNote(
                     note.copy(
-                        isHidden = true,
+                        isPrivate = true,
+                        isHidden = false,
                         hiddenCategoryAlias = categoryAlias
                     )
                 )
@@ -135,14 +137,15 @@ class NoteRepository(
     }
 
     /**
-     * Unhide multiple notes at once
+     * Mark multiple notes as not private at once
      */
-    suspend fun unhideNotes(noteIds: List<Long>) {
+    suspend fun unmarkNotesAsPrivate(noteIds: List<Long>) {
         noteIds.forEach { noteId ->
             val note = noteDao.getNoteById(noteId) ?: return@forEach
-            if (note.isHidden) {
+            if (note.isActuallyPrivate) {
                 noteDao.updateNote(
                     note.copy(
+                        isPrivate = false,
                         isHidden = false,
                         hiddenCategoryAlias = null
                     )

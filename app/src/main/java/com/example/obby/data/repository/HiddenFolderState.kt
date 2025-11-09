@@ -1,18 +1,18 @@
 package com.example.obby.data.repository
 
 /**
- * Represents the current state of the hidden folder system
+ * Represents the current state of the private folder system
  */
-sealed interface HiddenFolderState {
+sealed interface PrivateFolderState {
     /**
      * No password has been set up yet
      */
-    object Uninitialized : HiddenFolderState
+    object Uninitialized : PrivateFolderState
 
     /**
      * Password is set but folder is currently locked
      */
-    object Locked : HiddenFolderState
+    object Locked : PrivateFolderState
 
     /**
      * User is attempting to unlock (tracks failed attempts)
@@ -20,12 +20,12 @@ sealed interface HiddenFolderState {
     data class Unlocking(
         val failedAttempts: Int,
         val lockedOutUntil: Long? = null
-    ) : HiddenFolderState
+    ) : PrivateFolderState
 
     /**
      * Folder is unlocked and accessible
      */
-    object Unlocked : HiddenFolderState
+    object Unlocked : PrivateFolderState
 
     /**
      * Temporarily locked out due to too many failed attempts
@@ -33,5 +33,9 @@ sealed interface HiddenFolderState {
     data class LockedOut(
         val until: Long,
         val attemptCount: Int
-    ) : HiddenFolderState
+    ) : PrivateFolderState
 }
+
+// Backward compatibility alias
+@Deprecated("Use PrivateFolderState instead", ReplaceWith("PrivateFolderState"))
+typealias HiddenFolderState = PrivateFolderState

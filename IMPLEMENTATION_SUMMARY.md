@@ -177,7 +177,7 @@ implementation(libs.androidx.documentfile)
 app/src/main/java/com/example/obby/
 ├── ui/
 │   ├── screens/
-│   │   ├── NoteDetailScreen.kt      [MODIFIED - Toolbar moved to top]
+│   │   ├── NoteDetailScreen.kt      [MODIFIED - Toolbar moved to top and Enter key handling]
 │   │   ├── NotesListScreen.kt       [MODIFIED - Added settings navigation]
 │   │   └── SettingsScreen.kt        [NEW - Backup/Restore UI]
 │   ├── viewmodel/

@@ -39,7 +39,7 @@ fun CreatePasswordDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                "Create Hidden Folder Password",
+                "Create Private Password",
                 style = MaterialTheme.typography.headlineSmall
             )
         },
@@ -51,7 +51,7 @@ fun CreatePasswordDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    "Create a strong password to protect your hidden notes. " +
+                    "Create a strong password to protect your private notes. " +
                             "This password cannot be recovered if forgotten.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -220,14 +220,14 @@ fun UnlockHiddenFolderDialog(
                 tint = MaterialTheme.colorScheme.primary
             )
         },
-        title = { Text("Unlock Hidden Folder") },
+        title = { Text("Unlock Private") },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    "Enter your password to access hidden notes",
+                    "Enter your password to access private notes",
                     style = MaterialTheme.typography.bodyMedium
                 )
 

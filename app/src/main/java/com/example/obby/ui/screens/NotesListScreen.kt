@@ -123,8 +123,7 @@ fun NotesListScreen(
                         onSelectAll = { viewModel.selectAllNotes() },
                         onDelete = { showDeleteConfirmation = true },
                         onMove = { showMoveToFolderDialog = true },
-                        onHide = { viewModel.hideSelectedNotes() },
-                        onUnhide = { viewModel.unhideSelectedNotes() }
+                        onTogglePrivate = { viewModel.markSelectedNotesAsPrivate() }
                     )
                 }
 
@@ -219,8 +218,7 @@ fun NotesListScreen(
                                     }
                                 },
                                 onDelete = { viewModel.deleteNote(note) },
-                                onHide = { viewModel.toggleHideNote(note.id) },
-                                onUnhide = { viewModel.toggleHideNote(note.id) },
+                                onTogglePrivate = { viewModel.togglePrivateNote(note.id) },
                                 folders = folders
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -297,8 +295,7 @@ fun MultiSelectTopBar(
     onSelectAll: () -> Unit,
     onDelete: () -> Unit,
     onMove: () -> Unit,
-    onHide: (() -> Unit)? = null,
-    onUnhide: (() -> Unit)? = null
+    onTogglePrivate: () -> Unit
 ) {
     TopAppBar(
         title = { Text("$selectedCount selected") },
@@ -314,15 +311,8 @@ fun MultiSelectTopBar(
             IconButton(onClick = onMove) {
                 Icon(Icons.Default.DriveFileMove, contentDescription = "Move")
             }
-            if (onHide != null) {
-                IconButton(onClick = onHide) {
-                    Icon(Icons.Default.VisibilityOff, contentDescription = "Hide")
-                }
-            }
-            if (onUnhide != null) {
-                IconButton(onClick = onUnhide) {
-                    Icon(Icons.Default.Visibility, contentDescription = "Unhide")
-                }
+            IconButton(onClick = onTogglePrivate) {
+                Icon(Icons.Default.Lock, contentDescription = "Toggle Private")
             }
             IconButton(onClick = onDelete) {
                 Icon(
@@ -424,8 +414,7 @@ fun NoteListItem(
     onMove: (Long?) -> Unit,
     onShare: () -> Unit,
     onDelete: () -> Unit,
-    onHide: () -> Unit,
-    onUnhide: () -> Unit,
+    onTogglePrivate: () -> Unit,
     folders: List<Folder>,
     modifier: Modifier = Modifier
 ) {
@@ -552,12 +541,8 @@ fun NoteListItem(
                                 showDeleteDialog = true
                                 showContextMenu = false
                             },
-                            onHide = {
-                                onHide()
-                                showContextMenu = false
-                            },
-                            onUnhide = {
-                                onUnhide()
+                            onTogglePrivate = {
+                                onTogglePrivate()
                                 showContextMenu = false
                             }
                         )
@@ -646,10 +631,10 @@ fun NoteListItem(
                             tint = MaterialTheme.colorScheme.tertiary
                         )
                     }
-                    if (note.isHidden) {
+                    if (note.isActuallyPrivate) {
                         Icon(
-                            Icons.Default.VisibilityOff,
-                            contentDescription = "Hidden",
+                            Icons.Default.Lock,
+                            contentDescription = "Private",
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.error
                         )
@@ -736,8 +721,7 @@ fun NoteContextMenu(
     onMove: () -> Unit,
     onShare: () -> Unit,
     onDelete: () -> Unit,
-    onHide: (() -> Unit)? = null,
-    onUnhide: (() -> Unit)? = null
+    onTogglePrivate: () -> Unit
 ) {
     DropdownMenu(
         expanded = expanded,
@@ -775,34 +759,19 @@ fun NoteContextMenu(
             leadingIcon = { Icon(Icons.Default.Share, null) }
         )
 
-        // Add hide/unhide option
-        if (onHide != null) {
-            Divider()
-            DropdownMenuItem(
-                text = { Text(if (note.isHidden) "Unhide" else "Hide") },
-                onClick = onHide,
-                leadingIcon = {
-                    Icon(
-                        if (note.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                        null
-                    )
-                }
-            )
-        }
+        Divider()
 
-        if (onUnhide != null) {
-            Divider()
-            DropdownMenuItem(
-                text = { Text(if (note.isHidden) "Unhide" else "Hide") },
-                onClick = onUnhide,
-                leadingIcon = {
-                    Icon(
-                        if (note.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                        null
-                    )
-                }
-            )
-        }
+        // Single toggle for private/public
+        DropdownMenuItem(
+            text = { Text(if (note.isActuallyPrivate) "Remove from Private" else "Mark as Private") },
+            onClick = onTogglePrivate,
+            leadingIcon = {
+                Icon(
+                    if (note.isActuallyPrivate) Icons.Default.Visibility else Icons.Default.Lock,
+                    null
+                )
+            }
+        )
 
         Divider()
         DropdownMenuItem(
@@ -901,7 +870,7 @@ fun DrawerContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Hidden Folder")
+                    Text("Private")
                     Icon(
                         Icons.Default.Lock,
                         contentDescription = "Password Protected",
@@ -912,7 +881,7 @@ fun DrawerContent(
             },
             selected = false,
             onClick = onHiddenNotesClick,
-            icon = { Icon(Icons.Default.VisibilityOff, null) }
+            icon = { Icon(Icons.Default.Lock, null) }
         )
         
         Spacer(modifier = Modifier.height(16.dp))

@@ -36,7 +36,7 @@ class ObbiWidget : GlanceAppWidget() {
         )
 
         // Fetch data before providing content
-        val allNotes = repository.getAllNotesExcludingHidden().first()
+        val allNotes: List<Note> = repository.getAllNotesExcludingPrivate().first()
 
         // Get pinned notes first, then recent notes
         val notes = (allNotes.filter { it.isPinned } + allNotes.filterNot { it.isPinned })

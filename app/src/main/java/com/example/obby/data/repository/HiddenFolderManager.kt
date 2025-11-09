@@ -6,16 +6,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Manager for hidden folder state and operations
+ * Manager for private folder state and operations
  *
  * Coordinates between PasswordRepository and UI state
  */
-class HiddenFolderManager(context: Context) {
+class PrivateFolderManager(context: Context) {
 
     private val passwordRepo = PasswordRepository(context)
 
-    private val _state = MutableStateFlow<HiddenFolderState>(HiddenFolderState.Uninitialized)
-    val state: StateFlow<HiddenFolderState> = _state.asStateFlow()
+    private val _state = MutableStateFlow<PrivateFolderState>(PrivateFolderState.Uninitialized)
+    val state: StateFlow<PrivateFolderState> = _state.asStateFlow()
 
     /**
      * Initialize the manager and determine current state
@@ -23,14 +23,14 @@ class HiddenFolderManager(context: Context) {
     suspend fun initialize() {
         val hasPassword = passwordRepo.hasPassword()
         _state.value = if (hasPassword) {
-            HiddenFolderState.Locked
+            PrivateFolderState.Locked
         } else {
-            HiddenFolderState.Uninitialized
+            PrivateFolderState.Uninitialized
         }
     }
 
     /**
-     * Create a new password for the hidden folder
+     * Create a new password for the private folder
      *
      * @param password The password to set
      * @param confirmPassword Confirmation password (must match)
@@ -50,7 +50,7 @@ class HiddenFolderManager(context: Context) {
 
         val success = passwordRepo.setPassword(password.toCharArray())
         if (success) {
-            _state.value = HiddenFolderState.Unlocked
+            _state.value = PrivateFolderState.Unlocked
             return Result.success(true)
         }
 
@@ -58,7 +58,7 @@ class HiddenFolderManager(context: Context) {
     }
 
     /**
-     * Attempt to unlock the hidden folder
+     * Attempt to unlock the private folder
      *
      * @param password The password attempt
      * @return Result with success boolean or error message
@@ -68,7 +68,7 @@ class HiddenFolderManager(context: Context) {
         if (passwordRepo.isLockedOut()) {
             val remaining = passwordRepo.getLockoutRemainingMs()
             val seconds = (remaining / 1000).toInt()
-            _state.value = HiddenFolderState.LockedOut(
+            _state.value = PrivateFolderState.LockedOut(
                 until = System.currentTimeMillis() + remaining,
                 attemptCount = passwordRepo.getFailedAttempts()
             )
@@ -80,7 +80,7 @@ class HiddenFolderManager(context: Context) {
 
         if (isCorrect) {
             passwordRepo.resetAttempts()
-            _state.value = HiddenFolderState.Unlocked
+            _state.value = PrivateFolderState.Unlocked
             return Result.success(true)
         } else {
             passwordRepo.recordFailedAttempt()
@@ -89,14 +89,14 @@ class HiddenFolderManager(context: Context) {
             // Check if this caused a lockout
             if (passwordRepo.isLockedOut()) {
                 val remaining = passwordRepo.getLockoutRemainingMs()
-                _state.value = HiddenFolderState.LockedOut(
+                _state.value = PrivateFolderState.LockedOut(
                     until = System.currentTimeMillis() + remaining,
                     attemptCount = attempts
                 )
                 return Result.failure(Exception("Too many failed attempts. Locked out."))
             }
 
-            _state.value = HiddenFolderState.Unlocking(
+            _state.value = PrivateFolderState.Unlocking(
                 failedAttempts = attempts,
                 lockedOutUntil = null
             )
@@ -105,10 +105,10 @@ class HiddenFolderManager(context: Context) {
     }
 
     /**
-     * Lock the hidden folder
+     * Lock the private folder
      */
     fun lock() {
-        _state.value = HiddenFolderState.Locked
+        _state.value = PrivateFolderState.Locked
     }
 
     /**
@@ -142,6 +142,40 @@ class HiddenFolderManager(context: Context) {
         }
 
         return Result.failure(Exception("Incorrect old password"))
+    }
+
+    /**
+     * Remove the password (make private notes accessible without password)
+     *
+     * @param password Current password for confirmation
+     * @return Result with success boolean or error message
+     */
+    suspend fun removePassword(password: String): Result<Boolean> {
+        val isCorrect = passwordRepo.verifyPassword(password.toCharArray())
+        if (!isCorrect) {
+            return Result.failure(Exception("Incorrect password"))
+        }
+
+        passwordRepo.clearAll()
+        _state.value = PrivateFolderState.Uninitialized
+        return Result.success(true)
+    }
+
+    /**
+     * Remove a specific note from private status (requires password confirmation)
+     *
+     * @param noteId The ID of the note to remove from private
+     * @param password Password for confirmation
+     * @return Result with success boolean or error message
+     */
+    suspend fun removeNoteFromPrivate(noteId: Long, password: String): Result<Boolean> {
+        val isCorrect = passwordRepo.verifyPassword(password.toCharArray())
+        if (!isCorrect) {
+            return Result.failure(Exception("Incorrect password"))
+        }
+
+        // Password is correct, note will be unmarked in the UI layer
+        return Result.success(true)
     }
 
     /**
@@ -187,7 +221,7 @@ class HiddenFolderManager(context: Context) {
         )
 
         if (success) {
-            _state.value = HiddenFolderState.Unlocked
+            _state.value = PrivateFolderState.Unlocked
             return Result.success(true)
         }
 
@@ -198,14 +232,18 @@ class HiddenFolderManager(context: Context) {
      * Check if the folder is currently unlocked
      */
     fun isUnlocked(): Boolean {
-        return _state.value is HiddenFolderState.Unlocked
+        return _state.value is PrivateFolderState.Unlocked
     }
 
     /**
-     * Reset the entire hidden folder system (WARNING: irreversible!)
+     * Reset the entire private folder system (WARNING: irreversible!)
      */
     suspend fun resetAll() {
         passwordRepo.clearAll()
-        _state.value = HiddenFolderState.Uninitialized
+        _state.value = PrivateFolderState.Uninitialized
     }
 }
+
+// Backward compatibility alias
+@Deprecated("Use PrivateFolderManager instead", ReplaceWith("PrivateFolderManager"))
+typealias HiddenFolderManager = PrivateFolderManager

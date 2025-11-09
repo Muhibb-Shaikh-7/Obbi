@@ -19,7 +19,9 @@ data class Note(
     val isPinned: Boolean = false,
     val isFavorite: Boolean = false,
     val isEncrypted: Boolean = false,
+    @Deprecated("Use isPrivate instead", ReplaceWith("isPrivate"))
     val isHidden: Boolean = false,
+    val isPrivate: Boolean = false,
     val hiddenCategoryAlias: String? = null,
     val encryptedContentIv: ByteArray? = null
 ) {
@@ -39,6 +41,7 @@ data class Note(
         if (isFavorite != other.isFavorite) return false
         if (isEncrypted != other.isEncrypted) return false
         if (isHidden != other.isHidden) return false
+        if (isPrivate != other.isPrivate) return false
         if (hiddenCategoryAlias != other.hiddenCategoryAlias) return false
         if (encryptedContentIv != null) {
             if (other.encryptedContentIv == null) return false
@@ -59,8 +62,14 @@ data class Note(
         result = 31 * result + isFavorite.hashCode()
         result = 31 * result + isEncrypted.hashCode()
         result = 31 * result + isHidden.hashCode()
+        result = 31 * result + isPrivate.hashCode()
         result = 31 * result + (hiddenCategoryAlias?.hashCode() ?: 0)
         result = 31 * result + (encryptedContentIv?.contentHashCode() ?: 0)
         return result
     }
+
+    // Convenience property: a note is considered private if either isPrivate or isHidden is true
+    // This provides backward compatibility during transition
+    val isActuallyPrivate: Boolean
+        get() = isPrivate || isHidden
 }

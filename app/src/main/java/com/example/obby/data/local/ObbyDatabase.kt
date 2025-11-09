@@ -20,7 +20,7 @@ import com.example.obby.data.local.entity.*
         NoteTagCrossRef::class,
         NoteLink::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class ObbyDatabase : RoomDatabase() {
@@ -49,6 +49,21 @@ abstract class ObbyDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Rename isHidden to isPrivate for consistency
+                // SQLite doesn't support direct column rename, so we create new column and copy data
+                database.execSQL(
+                    "ALTER TABLE notes ADD COLUMN isPrivate INTEGER NOT NULL DEFAULT 0"
+                )
+                database.execSQL(
+                    "UPDATE notes SET isPrivate = isHidden"
+                )
+                // Note: We keep isHidden column for backward compatibility during transition
+                // Can be fully removed in a future migration after confirming all users have migrated
+            }
+        }
+
         fun getDatabase(context: Context): ObbyDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -56,7 +71,7 @@ abstract class ObbyDatabase : RoomDatabase() {
                     ObbyDatabase::class.java,
                     "obby_database"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                 INSTANCE = instance
                 instance

@@ -26,9 +26,9 @@ class NotesViewModel(
     private val _viewMode = MutableStateFlow(ViewMode.ALL)
     val viewMode: StateFlow<ViewMode> = _viewMode.asStateFlow()
 
-    // Hidden notes state
-    private val _showHiddenNotes = MutableStateFlow(false)
-    val showHiddenNotes: StateFlow<Boolean> = _showHiddenNotes.asStateFlow()
+    // Private notes state
+    private val _showPrivateNotes = MutableStateFlow(false)
+    val showPrivateNotes: StateFlow<Boolean> = _showPrivateNotes.asStateFlow()
 
     // Multi-select state
     private val _isMultiSelectMode = MutableStateFlow(false)
@@ -46,30 +46,30 @@ class NotesViewModel(
         selectedFolder,
         selectedTag,
         viewMode,
-        showHiddenNotes
-    ) { query, folderId, tagId, mode, showHidden ->
+        showPrivateNotes
+    ) { query, folderId, tagId, mode, showPrivate ->
         when {
-            showHidden -> repository.getHiddenNotes()
+            showPrivate -> repository.getPrivateNotes()
             query.isNotEmpty() -> repository.searchNotes(query)
-                .map { list -> list.filter { !it.isHidden } }
+                .map { list -> list.filter { !it.isActuallyPrivate } }
 
             tagId != null -> repository.getNotesForTag(tagId)
-                .map { list -> list.filter { !it.isHidden } }
+                .map { list -> list.filter { !it.isActuallyPrivate } }
 
             folderId != null -> repository.getNotesByFolder(folderId)
-                .map { list -> list.filter { !it.isHidden } }
+                .map { list -> list.filter { !it.isActuallyPrivate } }
 
             mode == ViewMode.PINNED -> repository.getPinnedNotes()
-                .map { list -> list.filter { !it.isHidden } }
+                .map { list -> list.filter { !it.isActuallyPrivate } }
 
             mode == ViewMode.FAVORITES -> repository.getFavoriteNotes()
-                .map { list -> list.filter { !it.isHidden } }
+                .map { list -> list.filter { !it.isActuallyPrivate } }
 
             mode == ViewMode.NO_FOLDER -> repository.getNotesWithoutFolder()
-                .map { list -> list.filter { !it.isHidden } }
+                .map { list -> list.filter { !it.isActuallyPrivate } }
 
-            mode == ViewMode.HIDDEN -> repository.getHiddenNotes()
-            else -> repository.getAllNotesExcludingHidden()
+            mode == ViewMode.PRIVATE -> repository.getPrivateNotes()
+            else -> repository.getAllNotesExcludingPrivate()
         }
     }.flatMapLatest { it }
         .stateIn(
@@ -111,31 +111,31 @@ class NotesViewModel(
         _selectedFolder.value = null
         _selectedTag.value = null
 
-        // Special handling for HIDDEN view mode
-        if (mode == ViewMode.HIDDEN) {
-            _showHiddenNotes.value = true
-        } else if (_showHiddenNotes.value) {
-            _showHiddenNotes.value = false
+        // Special handling for PRIVATE view mode
+        if (mode == ViewMode.PRIVATE) {
+            _showPrivateNotes.value = true
+        } else if (_showPrivateNotes.value) {
+            _showPrivateNotes.value = false
         }
     }
 
     /**
-     * Toggle visibility of hidden notes
+     * Toggle visibility of private notes
      */
-    fun toggleHiddenNotesView() {
-        _showHiddenNotes.value = !_showHiddenNotes.value
-        if (_showHiddenNotes.value) {
-            _viewMode.value = ViewMode.HIDDEN
+    fun togglePrivateNotesView() {
+        _showPrivateNotes.value = !_showPrivateNotes.value
+        if (_showPrivateNotes.value) {
+            _viewMode.value = ViewMode.PRIVATE
         } else {
             _viewMode.value = ViewMode.ALL
         }
     }
 
     /**
-     * Quick hide all visible hidden notes (panic button)
+     * Quick hide all visible private notes (panic button)
      */
     fun quickHideAll() {
-        _showHiddenNotes.value = false
+        _showPrivateNotes.value = false
         _viewMode.value = ViewMode.ALL
     }
 
@@ -324,42 +324,42 @@ class NotesViewModel(
         }
     }
 
-    fun toggleHideNote(noteId: Long, categoryAlias: String = "Recipes") {
+    fun togglePrivateNote(noteId: Long, categoryAlias: String = "Recipes") {
         viewModelScope.launch {
             try {
-                repository.toggleHideNote(noteId, categoryAlias)
-                _actionMessage.emit("Note visibility updated")
+                repository.togglePrivateNote(noteId, categoryAlias)
+                _actionMessage.emit("Note privacy updated")
             } catch (e: Exception) {
-                Log.e("NotesViewModel", "Error toggling hide", e)
-                _actionMessage.emit("Failed to update note visibility")
+                Log.e("NotesViewModel", "Error toggling private", e)
+                _actionMessage.emit("Failed to update note privacy")
             }
         }
     }
 
-    fun hideSelectedNotes(categoryAlias: String = "Recipes") {
+    fun markSelectedNotesAsPrivate(categoryAlias: String = "Recipes") {
         viewModelScope.launch {
             try {
                 val noteIds = _selectedNotes.value.toList()
-                repository.hideNotes(noteIds, categoryAlias)
-                _actionMessage.emit("${noteIds.size} note(s) hidden")
+                repository.markNotesAsPrivate(noteIds, categoryAlias)
+                _actionMessage.emit("${noteIds.size} note(s) marked as private")
                 clearSelection()
             } catch (e: Exception) {
-                Log.e("NotesViewModel", "Error hiding notes", e)
-                _actionMessage.emit("Failed to hide notes")
+                Log.e("NotesViewModel", "Error marking notes as private", e)
+                _actionMessage.emit("Failed to mark notes as private")
             }
         }
     }
 
-    fun unhideSelectedNotes() {
+    fun unmarkSelectedNotesAsPrivate() {
         viewModelScope.launch {
             try {
                 val noteIds = _selectedNotes.value.toList()
-                repository.unhideNotes(noteIds)
-                _actionMessage.emit("${noteIds.size} note(s) unhidden")
+                repository.unmarkNotesAsPrivate(noteIds)
+                _actionMessage.emit("${noteIds.size} note(s) removed from private")
                 clearSelection()
             } catch (e: Exception) {
-                Log.e("NotesViewModel", "Error unhiding notes", e)
-                _actionMessage.emit("Failed to unhide notes")
+                Log.e("NotesViewModel", "Error removing notes from private", e)
+                _actionMessage.emit("Failed to remove notes from private")
             }
         }
     }
@@ -397,6 +397,6 @@ class NotesViewModel(
     }
 
     enum class ViewMode {
-        ALL, PINNED, FAVORITES, NO_FOLDER, HIDDEN
+        ALL, PINNED, FAVORITES, NO_FOLDER, PRIVATE
     }
 }

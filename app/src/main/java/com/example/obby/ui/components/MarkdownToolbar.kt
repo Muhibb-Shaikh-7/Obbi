@@ -383,6 +383,107 @@ object MarkdownFormatter {
         }
     }
 
+    /**
+     * Handle Enter key press with Markdown auto-continuation
+     *
+     * @param currentText The current text content
+     * @param cursorPosition The current cursor position
+     * @return Pair of new text and new cursor position
+     */
+    fun handleEnterKey(
+        currentText: String,
+        cursorPosition: Int
+    ): Pair<String, Int> {
+        // Find the start and end of the current line
+        val lineStart = currentText.lastIndexOf('\n', cursorPosition - 1) + 1
+        val lineEnd = currentText.indexOf('\n', cursorPosition).let {
+            if (it == -1) currentText.length else it
+        }
+        val currentLine = currentText.substring(lineStart, lineEnd)
+
+        // Get indentation
+        val indent = currentLine.takeWhile { it == ' ' || it == '\t' }
+        val contentAfterIndent = currentLine.substring(indent.length)
+
+        // Check for various list patterns
+        val nextLinePrefix = getNextLinePrefix(contentAfterIndent, indent)
+
+        if (nextLinePrefix == null) {
+            // No special handling, just insert newline
+            val newText = currentText.substring(0, cursorPosition) + "\n" + currentText.substring(
+                cursorPosition
+            )
+            return newText to (cursorPosition + 1)
+        } else if (nextLinePrefix.isEmpty()) {
+            // Empty list item - remove the prefix and insert plain newline
+            // Find the position of the list marker
+            val contentStartInLine = lineStart + indent.length
+            val contentEndInLine = when {
+                contentAfterIndent.startsWith("- [ ] ") || contentAfterIndent.startsWith("- [x] ") -> contentStartInLine + 6
+                contentAfterIndent.startsWith("- ") || contentAfterIndent.startsWith("* ") -> contentStartInLine + 2
+                else -> {
+                    val numMatch = Regex("""^(\d+)\.\s""").find(contentAfterIndent)
+                    if (numMatch != null) contentStartInLine + numMatch.value.length else contentStartInLine
+                }
+            }
+
+            // Remove the list marker and insert newline
+            val newText = currentText.substring(0, contentStartInLine) +
+                    currentText.substring(contentEndInLine)
+            return newText to contentStartInLine
+        } else {
+            // Insert newline with continuation prefix
+            val newText = currentText.substring(
+                0,
+                cursorPosition
+            ) + "\n" + nextLinePrefix + currentText.substring(cursorPosition)
+            return newText to (cursorPosition + 1 + nextLinePrefix.length)
+        }
+    }
+
+    /**
+     * Determine the prefix for the next line based on the current line content
+     *
+     * @param contentAfterIndent The current line content after indentation
+     * @param indent The indentation string
+     * @return The prefix for next line, null if no special handling, empty string to exit list
+     */
+    private fun getNextLinePrefix(contentAfterIndent: String, indent: String): String? {
+        // Check for empty prefixed lines (exit list)
+        when {
+            contentAfterIndent == "- " || contentAfterIndent == "* " -> return ""
+            contentAfterIndent.equals("- [ ] ", ignoreCase = true) ||
+                    contentAfterIndent.equals("- [x] ", ignoreCase = true) -> return ""
+        }
+
+        val numberMatch = Regex("""^(\d+)\.\s$""").matchEntire(contentAfterIndent)
+        if (numberMatch != null) return ""
+
+        // Check for checkbox continuation
+        val checkboxMatch = Regex("""^-\s\[([ xX])\]\s""").find(contentAfterIndent)
+        if (checkboxMatch != null) {
+            return "$indent- [ ] "
+        }
+
+        // Check for bullet list continuation
+        if (contentAfterIndent.startsWith("- ")) {
+            return "$indent- "
+        }
+        if (contentAfterIndent.startsWith("* ")) {
+            return "$indent* "
+        }
+
+        // Check for numbered list continuation
+        val numberedMatch = Regex("""^(\d+)\.\s""").find(contentAfterIndent)
+        if (numberedMatch != null) {
+            val currentNumber = numberedMatch.groupValues[1].toInt()
+            return "$indent${currentNumber + 1}. "
+        }
+
+        // No special pattern found
+        return null
+    }
+
     private fun wrapText(
         text: String,
         start: Int,

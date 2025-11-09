@@ -6,9 +6,9 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/dark__emphasis_on_blood_stains_dragon_logo_with_the_tittle_cce_with_emphasis_blue_fare_with_emp_22961117"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@drawable/dark__emphasis_on_blood_stains_dragon_logo_with_the_tittle_cce_with_emphasis_blue_fare_with_emp_22961117"
         android:supportsRtl="true"
         android:theme="@style/Theme.Obby">
         <activity

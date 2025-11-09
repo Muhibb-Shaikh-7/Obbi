@@ -10,10 +10,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.obby.data.local.entity.Note
-import com.example.obby.data.repository.HiddenFolderManager
 import com.example.obby.data.repository.HiddenFolderState
+import com.example.obby.data.repository.PrivateFolderManager
+import com.example.obby.data.repository.PrivateFolderState
 import com.example.obby.data.repository.NoteRepository
 import com.example.obby.ui.components.*
 import kotlinx.coroutines.delay
@@ -30,19 +34,20 @@ fun HiddenNotesScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val hiddenFolderManager = remember { HiddenFolderManager(context) }
-    val folderState by hiddenFolderManager.state.collectAsState()
+    val privateFolderManager = remember { PrivateFolderManager(context) }
+    val folderState by privateFolderManager.state.collectAsState()
 
     // Hidden notes
     val hiddenNotes = remember { mutableStateListOf<Note>() }
 
     // Dialog states
-    var showCreatePasswordDialog by remember { mutableStateOf(false) }
     var showUnlockDialog by remember { mutableStateOf(false) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
     var showRecoveryPhraseDialog by remember { mutableStateOf(false) }
     var showRecoveryDialog by remember { mutableStateOf(false) }
     var showLockedOutDialog by remember { mutableStateOf(false) }
+    var showRemoveFromPrivateDialog by remember { mutableStateOf(false) }
+    var selectedNoteToRemove by remember { mutableStateOf<Note?>(null) }
     var recoveryPhrase by remember { mutableStateOf("") }
     var lockoutSeconds by remember { mutableStateOf(0) }
     var failedAttempts by remember { mutableStateOf(0) }
@@ -52,45 +57,47 @@ fun HiddenNotesScreen(
 
     // Initialize manager
     LaunchedEffect(Unit) {
-        hiddenFolderManager.initialize()
+        privateFolderManager.initialize()
     }
 
     // Load hidden notes when unlocked
     LaunchedEffect(folderState) {
-        when (folderState) {
-            is HiddenFolderState.Unlocked -> {
+        val currentState = folderState
+        when (currentState) {
+            PrivateFolderState.Unlocked -> {
                 // Load hidden notes
                 repository.getAllNotes().collect { allNotes ->
                     hiddenNotes.clear()
-                    hiddenNotes.addAll(allNotes.filter { it.isHidden })
+                    hiddenNotes.addAll(allNotes.filter { it.isActuallyPrivate })
                 }
 
                 // Start auto-lock timer (2 minutes)
                 autoLockJob?.cancel()
                 autoLockJob = launch {
                     delay(2 * 60 * 1000L)
-                    hiddenFolderManager.lock()
-                    snackbarHostState.showSnackbar("Hidden folder locked due to inactivity")
+                    privateFolderManager.lock()
+                    snackbarHostState.showSnackbar("Private locked due to inactivity")
                 }
             }
 
-            is HiddenFolderState.Uninitialized -> {
-                showCreatePasswordDialog = true
+            PrivateFolderState.Uninitialized -> {
+                // No password set - user needs to go to Settings
+                // Don't show any dialog, just display message in UI
             }
 
-            is HiddenFolderState.Locked -> {
+            PrivateFolderState.Locked -> {
+                // Show unlock dialog when locked
                 showUnlockDialog = true
                 autoLockJob?.cancel()
             }
 
-            is HiddenFolderState.Unlocking -> {
-                failedAttempts = (folderState as HiddenFolderState.Unlocking).failedAttempts
+            is PrivateFolderState.Unlocking -> {
+                failedAttempts = currentState.failedAttempts
             }
 
-            is HiddenFolderState.LockedOut -> {
-                val lockedState = folderState as HiddenFolderState.LockedOut
-                lockoutSeconds = ((lockedState.until - System.currentTimeMillis()) / 1000).toInt()
-                failedAttempts = lockedState.attemptCount
+            is PrivateFolderState.LockedOut -> {
+                lockoutSeconds = ((currentState.until - System.currentTimeMillis()) / 1000).toInt()
+                failedAttempts = currentState.attemptCount
                 showLockedOutDialog = true
                 showUnlockDialog = false
             }
@@ -105,7 +112,7 @@ fun HiddenNotesScreen(
                 lockoutSeconds--
             }
             showLockedOutDialog = false
-            hiddenFolderManager.initialize()
+            privateFolderManager.initialize()
         }
     }
 
@@ -113,20 +120,20 @@ fun HiddenNotesScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Hidden Folder") },
+                title = { Text("Private") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
                     }
                 },
                 actions = {
-                    if (folderState is HiddenFolderState.Unlocked) {
+                    if (folderState is PrivateFolderState.Unlocked) {
                         // Lock button
                         IconButton(
                             onClick = {
-                                hiddenFolderManager.lock()
+                                privateFolderManager.lock()
                                 scope.launch {
-                                    snackbarHostState.showSnackbar("Hidden folder locked")
+                                    snackbarHostState.showSnackbar("Private locked")
                                 }
                             }
                         ) {
@@ -157,7 +164,7 @@ fun HiddenNotesScreen(
                                 onClick = {
                                     scope.launch {
                                         recoveryPhrase =
-                                            hiddenFolderManager.generateRecoveryPhrase()
+                                            privateFolderManager.generateRecoveryPhrase()
                                         showRecoveryPhraseDialog = true
                                         showMenu = false
                                     }
@@ -176,7 +183,7 @@ fun HiddenNotesScreen(
                 .padding(paddingValues)
         ) {
             when (folderState) {
-                is HiddenFolderState.Unlocked -> {
+                PrivateFolderState.Unlocked -> {
                     if (hiddenNotes.isEmpty()) {
                         // Empty state
                         Column(
@@ -187,20 +194,20 @@ fun HiddenNotesScreen(
                             verticalArrangement = Arrangement.Center
                         ) {
                             Icon(
-                                Icons.Default.VisibilityOff,
+                                Icons.Default.Lock,
                                 contentDescription = null,
                                 modifier = Modifier.size(64.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                "No Hidden Notes",
+                                "No Private Notes",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                "Long-press notes in the main list and select \"Hide\" to add them here",
+                                "Long-press notes in the main list and select \"Mark as Private\" to add them here",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -233,7 +240,7 @@ fun HiddenNotesScreen(
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column {
                                             Text(
-                                                "Folder will auto-lock after 2 minutes of inactivity",
+                                                "Will auto-lock after 2 minutes of inactivity",
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                                             )
@@ -249,6 +256,8 @@ fun HiddenNotesScreen(
                             }
 
                             items(hiddenNotes) { note ->
+                                var showNoteMenu by remember { mutableStateOf(false) }
+
                                 Card(
                                     onClick = { onNoteClick(note.id) },
                                     modifier = Modifier.fillMaxWidth()
@@ -260,19 +269,53 @@ fun HiddenNotesScreen(
                                     ) {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
                                                 note.title,
                                                 style = MaterialTheme.typography.titleMedium,
                                                 modifier = Modifier.weight(1f)
                                             )
-                                            Icon(
-                                                Icons.Default.VisibilityOff,
-                                                contentDescription = "Hidden",
-                                                modifier = Modifier.size(20.dp),
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
+
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    Icons.Default.Lock,
+                                                    contentDescription = "Private",
+                                                    modifier = Modifier.size(20.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+
+                                                Box {
+                                                    IconButton(onClick = { showNoteMenu = true }) {
+                                                        Icon(
+                                                            Icons.Default.MoreVert,
+                                                            contentDescription = "More options",
+                                                            modifier = Modifier.size(20.dp)
+                                                        )
+                                                    }
+
+                                                    DropdownMenu(
+                                                        expanded = showNoteMenu,
+                                                        onDismissRequest = { showNoteMenu = false }
+                                                    ) {
+                                                        DropdownMenuItem(
+                                                            text = { Text("Remove from Private") },
+                                                            onClick = {
+                                                                selectedNoteToRemove = note
+                                                                showRemoveFromPrivateDialog = true
+                                                                showNoteMenu = false
+                                                            },
+                                                            leadingIcon = {
+                                                                Icon(
+                                                                    Icons.Default.LockOpen,
+                                                                    contentDescription = null
+                                                                )
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
 
                                         if (note.content.isNotBlank()) {
@@ -291,6 +334,46 @@ fun HiddenNotesScreen(
                     }
                 }
 
+                PrivateFolderState.Uninitialized -> {
+                    // Show message to set password in Settings
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Private Password Required",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Please set a password in Settings to use Private notes",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                lineHeight = MaterialTheme.typography.bodyMedium.fontSize * 1.0
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = onNavigateBack
+                        ) {
+                            Icon(Icons.Default.Settings, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Go to Settings")
+                        }
+                    }
+                }
+
                 else -> {
                     // Show loading or locked state
                     Box(
@@ -305,35 +388,7 @@ fun HiddenNotesScreen(
     }
 
     // Dialogs
-    if (showCreatePasswordDialog) {
-        CreatePasswordDialog(
-            onDismiss = {
-                showCreatePasswordDialog = false
-                onNavigateBack()
-            },
-            onCreate = { password, confirmPassword ->
-                scope.launch {
-                    val result = hiddenFolderManager.createPassword(password, confirmPassword)
-                    result.onSuccess {
-                        showCreatePasswordDialog = false
-                        snackbarHostState.showSnackbar("Password created successfully")
-                    }.onFailure { error ->
-                        snackbarHostState.showSnackbar(
-                            error.message ?: "Failed to create password"
-                        )
-                    }
-                }
-            },
-            onSetupRecoveryPhrase = {
-                scope.launch {
-                    recoveryPhrase = hiddenFolderManager.generateRecoveryPhrase()
-                    showRecoveryPhraseDialog = true
-                }
-            }
-        )
-    }
-
-    if (showUnlockDialog && folderState !is HiddenFolderState.LockedOut) {
+    if (showUnlockDialog && folderState !is PrivateFolderState.LockedOut && folderState !is PrivateFolderState.Uninitialized) {
         UnlockHiddenFolderDialog(
             onDismiss = {
                 showUnlockDialog = false
@@ -341,10 +396,10 @@ fun HiddenNotesScreen(
             },
             onUnlock = { password ->
                 scope.launch {
-                    val result = hiddenFolderManager.unlock(password)
+                    val result = privateFolderManager.unlock(password)
                     result.onSuccess {
                         showUnlockDialog = false
-                        snackbarHostState.showSnackbar("Hidden folder unlocked")
+                        snackbarHostState.showSnackbar("Private unlocked")
                     }.onFailure { error ->
                         snackbarHostState.showSnackbar(
                             error.message ?: "Failed to unlock"
@@ -365,7 +420,7 @@ fun HiddenNotesScreen(
             onDismiss = { showChangePasswordDialog = false },
             onChange = { oldPassword, newPassword, confirmPassword ->
                 scope.launch {
-                    val result = hiddenFolderManager.changePassword(
+                    val result = privateFolderManager.changePassword(
                         oldPassword,
                         newPassword,
                         confirmPassword
@@ -405,7 +460,7 @@ fun HiddenNotesScreen(
             onDismiss = { showRecoveryDialog = false },
             onRecover = { phrase, newPassword, confirmPassword ->
                 scope.launch {
-                    val result = hiddenFolderManager.recoverWithPhrase(
+                    val result = privateFolderManager.recoverWithPhrase(
                         phrase,
                         newPassword,
                         confirmPassword
@@ -435,4 +490,112 @@ fun HiddenNotesScreen(
             }
         )
     }
+
+    if (showRemoveFromPrivateDialog && selectedNoteToRemove != null) {
+        RemoveFromPrivateDialog(
+            noteTitle = selectedNoteToRemove!!.title,
+            onDismiss = {
+                showRemoveFromPrivateDialog = false
+                selectedNoteToRemove = null
+            },
+            onRemove = { password ->
+                scope.launch {
+                    val result = privateFolderManager.removeNoteFromPrivate(
+                        selectedNoteToRemove!!.id,
+                        password
+                    )
+                    result.onSuccess {
+                        // Password verified, now remove from private
+                        repository.togglePrivateNote(selectedNoteToRemove!!.id)
+                        showRemoveFromPrivateDialog = false
+                        selectedNoteToRemove = null
+                        snackbarHostState.showSnackbar("Note removed from Private")
+                    }.onFailure { error ->
+                        snackbarHostState.showSnackbar(
+                            error.message ?: "Incorrect password"
+                        )
+                    }
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun RemoveFromPrivateDialog(
+    noteTitle: String,
+    onDismiss: () -> Unit,
+    onRemove: (String) -> Unit
+) {
+    var password by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                Icons.Default.LockOpen,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = { Text("Remove from Private") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Are you sure you want to remove \"$noteTitle\" from Private?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Text(
+                    "This note will become visible in the main notes list.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Text(
+                    "Enter your password to confirm:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    singleLine = true,
+                    visualTransformation = if (showPassword)
+                        VisualTransformation.None
+                    else
+                        PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { showPassword = !showPassword }) {
+                            Icon(
+                                if (showPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (showPassword) "Hide password" else "Show password"
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { if (password.isNotEmpty()) onRemove(password) },
+                enabled = password.isNotEmpty()
+            ) {
+                Text("Remove")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

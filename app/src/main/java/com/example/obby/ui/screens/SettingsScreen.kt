@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.obby.data.repository.NoteRepository
+import com.example.obby.data.repository.PrivateFolderManager
+import com.example.obby.data.repository.PrivateFolderState
 import com.example.obby.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
@@ -37,9 +39,22 @@ fun SettingsScreen(
     val backupState by viewModel.backupState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Private folder manager for password settings
+    val privateFolderManager = remember { PrivateFolderManager(context) }
+    var hasPassword by remember { mutableStateOf(false) }
+
+    // Check if password is set
+    LaunchedEffect(Unit) {
+        privateFolderManager.initialize()
+        hasPassword = privateFolderManager.state.value !is PrivateFolderState.Uninitialized
+    }
+
     var showRestoreConfirmDialog by remember { mutableStateOf(false) }
     var selectedBackupUri by remember { mutableStateOf<Uri?>(null) }
     var showMarkdownGuide by remember { mutableStateOf(false) }
+    var showSetPasswordDialog by remember { mutableStateOf(false) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var showRemovePasswordDialog by remember { mutableStateOf(false) }
 
     // Backup folder picker launcher
     val backupFolderLauncher = rememberLauncherForActivityResult(
@@ -96,6 +111,49 @@ fun SettingsScreen(
                 .padding(paddingValues),
             contentPadding = PaddingValues(16.dp)
         ) {
+            // Privacy Section
+            item {
+                Text(
+                    text = "Privacy",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
+            item {
+                if (!hasPassword) {
+                    SettingItem(
+                        icon = Icons.Default.Lock,
+                        title = "Set Private Password",
+                        subtitle = "Protect your private notes with a password",
+                        onClick = { showSetPasswordDialog = true }
+                    )
+                } else {
+                    SettingItem(
+                        icon = Icons.Default.Key,
+                        title = "Change Private Password",
+                        subtitle = "Update your password",
+                        onClick = { showChangePasswordDialog = true }
+                    )
+                }
+            }
+
+            if (hasPassword) {
+                item {
+                    SettingItem(
+                        icon = Icons.Default.LockOpen,
+                        title = "Remove Private Password",
+                        subtitle = "Warning: Private notes will be accessible without password",
+                        onClick = { showRemovePasswordDialog = true }
+                    )
+                }
+            }
+
+            item {
+                Divider(modifier = Modifier.padding(vertical = 16.dp))
+            }
+
             // Backup & Restore Section
             item {
                 Text(
@@ -183,6 +241,67 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    // Password Dialogs
+    if (showSetPasswordDialog) {
+        com.example.obby.ui.components.CreatePasswordDialog(
+            onDismiss = { showSetPasswordDialog = false },
+            onCreate = { password, confirmPassword ->
+                scope.launch {
+                    val result = privateFolderManager.createPassword(password, confirmPassword)
+                    result.onSuccess {
+                        hasPassword = true
+                        showSetPasswordDialog = false
+                        snackbarHostState.showSnackbar("Password set successfully")
+                    }.onFailure { error ->
+                        snackbarHostState.showSnackbar(error.message ?: "Failed to set password")
+                    }
+                }
+            },
+            onSetupRecoveryPhrase = {
+                // Optional: Setup recovery phrase
+            }
+        )
+    }
+
+    if (showChangePasswordDialog) {
+        com.example.obby.ui.components.ChangePasswordDialog(
+            onDismiss = { showChangePasswordDialog = false },
+            onChange = { oldPassword, newPassword, confirmPassword ->
+                scope.launch {
+                    val result = privateFolderManager.changePassword(
+                        oldPassword,
+                        newPassword,
+                        confirmPassword
+                    )
+                    result.onSuccess {
+                        showChangePasswordDialog = false
+                        snackbarHostState.showSnackbar("Password changed successfully")
+                    }.onFailure { error ->
+                        snackbarHostState.showSnackbar(error.message ?: "Failed to change password")
+                    }
+                }
+            }
+        )
+    }
+
+    if (showRemovePasswordDialog) {
+        RemovePasswordDialog(
+            onDismiss = { showRemovePasswordDialog = false },
+            onConfirm = { password ->
+                scope.launch {
+                    val result: Result<Boolean> = privateFolderManager.removePassword(password)
+                    result.onSuccess { _: Boolean ->
+                        hasPassword = false
+                        showRemovePasswordDialog = false
+                        snackbarHostState.showSnackbar("Password removed successfully")
+                    }.onFailure { error: Throwable ->
+                        snackbarHostState.showSnackbar(error.message ?: "Failed to remove password")
+                    }
+                }
+            }
+        )
     }
 
     // Restore confirmation dialog
@@ -443,4 +562,79 @@ fun MarkdownSection(
             }
         }
     }
+}
+
+@Composable
+fun RemovePasswordDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var password by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                Icons.Default.Warning,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        title = { Text("Remove Private Password") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "⚠️ Warning: Removing the password will make all private notes accessible without authentication.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+
+                Text(
+                    "Enter your current password to confirm:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Current Password") },
+                    singleLine = true,
+                    visualTransformation = if (showPassword)
+                        androidx.compose.ui.text.input.VisualTransformation.None
+                    else
+                        androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { showPassword = !showPassword }) {
+                            Icon(
+                                if (showPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (showPassword) "Hide password" else "Show password"
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (password.isNotEmpty()) onConfirm(password) },
+                enabled = password.isNotEmpty(),
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("Remove Password")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
