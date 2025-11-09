@@ -359,7 +359,10 @@ fun NoteDetailScreen(
                                 if (note?.content?.isNotBlank() == true) {
                                     MarkdownPreview(
                                         markdown = note!!.content,
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onCheckboxToggled = { updatedMarkdown ->
+                                            viewModel.updateContent(updatedMarkdown)
+                                        }
                                     )
                                 } else {
                                     Text(
@@ -497,7 +500,8 @@ fun NoteDetailScreen(
 @Composable
 fun MarkdownPreview(
     markdown: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onCheckboxToggled: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val isDarkTheme = isSystemInDarkTheme()
@@ -526,8 +530,8 @@ fun MarkdownPreview(
     } else {
         android.graphics.Color.parseColor("#6750A4")
     }
-    
-    val markwon = remember(isDarkTheme) {
+
+    val markwon = remember(isDarkTheme, onCheckboxToggled) {
         Markwon.builder(context)
             .usePlugin(StrikethroughPlugin.create())
             .usePlugin(TablePlugin.create(context))
@@ -544,6 +548,58 @@ fun MarkdownPreview(
                         .codeBlockBackgroundColor(codeBackgroundColor)
                         .blockQuoteColor(linkColor)
                         .listItemColor(textColor)
+                }
+
+                // Add interactive checkbox support if callback is provided
+                override fun configureSpansFactory(builder: io.noties.markwon.MarkwonSpansFactory.Builder) {
+                    if (onCheckboxToggled != null) {
+                        // Get the original TaskListItem factory
+                        val originalFactory =
+                            builder.getFactory(io.noties.markwon.ext.tasklist.TaskListItem::class.java)
+
+                        if (originalFactory != null) {
+                            builder.setFactory(io.noties.markwon.ext.tasklist.TaskListItem::class.java) { configuration, props ->
+                                val span = originalFactory.getSpans(configuration, props)
+
+                                if (span is io.noties.markwon.ext.tasklist.TaskListSpan) {
+                                    // Return array of spans: original span + clickable span
+                                    arrayOf(
+                                        span,
+                                        object : android.text.style.ClickableSpan() {
+                                            override fun onClick(widget: android.view.View) {
+                                                // Toggle visual state
+                                                span.isDone = !span.isDone
+
+                                                // Invalidate widget to show change
+                                                widget.invalidate()
+
+                                                // Update the markdown content
+                                                if (widget is TextView) {
+                                                    val text = widget.text
+                                                    if (text is android.text.Spanned) {
+                                                        // Find the checkbox position and toggle it
+                                                        val updatedMarkdown =
+                                                            toggleCheckboxInMarkdown(
+                                                                markdown,
+                                                                text,
+                                                                span
+                                                            )
+                                                        onCheckboxToggled?.invoke(updatedMarkdown)
+                                                    }
+                                                }
+                                            }
+
+                                            override fun updateDrawState(ds: android.text.TextPaint) {
+                                                // No-op: don't change appearance (don't make it look like a link)
+                                            }
+                                        }
+                                    )
+                                } else {
+                                    span
+                                }
+                            }
+                        }
+                    }
                 }
             })
             .build()
@@ -562,6 +618,10 @@ fun MarkdownPreview(
                     android.view.ViewGroup.LayoutParams.MATCH_PARENT,
                     android.view.ViewGroup.LayoutParams.WRAP_CONTENT
                 )
+                // Set movement method to enable clickable spans
+                if (onCheckboxToggled != null) {
+                    movementMethod = android.text.method.LinkMovementMethod.getInstance()
+                }
             }
         },
         update = { textView ->
@@ -574,6 +634,40 @@ fun MarkdownPreview(
             }
         }
     )
+}
+
+// Helper function to toggle checkbox in markdown text
+private fun toggleCheckboxInMarkdown(
+    markdown: String,
+    renderedText: android.text.Spanned,
+    clickedSpan: io.noties.markwon.ext.tasklist.TaskListSpan
+): String {
+    // Find all checkboxes in the markdown
+    val checkboxPattern = Regex("- \\[([ xX])\\]")
+    val matches = checkboxPattern.findAll(markdown).toList()
+
+    // Find all TaskListSpan instances in the rendered text
+    val spans = renderedText.getSpans(
+        0,
+        renderedText.length,
+        io.noties.markwon.ext.tasklist.TaskListSpan::class.java
+    )
+
+    // Find the index of the clicked span
+    val spanIndex = spans.indexOf(clickedSpan)
+
+    if (spanIndex >= 0 && spanIndex < matches.size) {
+        val match = matches[spanIndex]
+        val currentState = match.groupValues[1]
+        val newState = if (currentState == " ") "x" else " "
+
+        // Replace the checkbox at the specific position
+        val before = markdown.substring(0, match.range.first)
+        val after = markdown.substring(match.range.last + 1)
+        return before + "- [$newState]" + after
+    }
+
+    return markdown
 }
 
 @Composable

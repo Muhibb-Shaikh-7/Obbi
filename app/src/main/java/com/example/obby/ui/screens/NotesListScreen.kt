@@ -563,12 +563,9 @@ fun NoteListItem(
                         .padding(10.dp)
                 ) {
                     if (note.content.isNotBlank()) {
-                        Text(
-                            text = note.content,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFFE2E8F0), // Light gray text
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                        MarkdownListPreview(
+                            markdown = note.content,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     } else {
                         Text(

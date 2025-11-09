@@ -190,6 +190,18 @@ class NoteDetailViewModel(
         }
     }
 
+    fun updateContent(content: String) {
+        viewModelScope.launch {
+            try {
+                note.value?.let { currentNote ->
+                    repository.updateNote(currentNote.copy(content = content))
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating content", e)
+            }
+        }
+    }
+
     fun updateNoteTitle(title: String) {
         viewModelScope.launch {
             try {
