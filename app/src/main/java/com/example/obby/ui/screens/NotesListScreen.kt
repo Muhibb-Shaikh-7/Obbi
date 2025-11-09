@@ -47,7 +47,8 @@ fun NotesListScreen(
     repository: NoteRepository,
     onNoteClick: (Long) -> Unit,
     onGraphClick: () -> Unit,
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onHiddenNotesClick: () -> Unit = {}
 ) {
     val viewModel = remember { NotesViewModel(repository) }
     val notes by viewModel.notes.collectAsState()
@@ -99,7 +100,11 @@ fun NotesListScreen(
                         scope.launch { drawerState.close() }
                     },
                     onCreateFolder = { showCreateFolderDialog = true },
-                    onSettingsClick = { onSettingsClick() }
+                    onSettingsClick = { onSettingsClick() },
+                    onHiddenNotesClick = {
+                        onHiddenNotesClick()
+                        scope.launch { drawerState.close() }
+                    }
                 )
             }
         }
@@ -117,7 +122,9 @@ fun NotesListScreen(
                         onClearSelection = { viewModel.clearSelection() },
                         onSelectAll = { viewModel.selectAllNotes() },
                         onDelete = { showDeleteConfirmation = true },
-                        onMove = { showMoveToFolderDialog = true }
+                        onMove = { showMoveToFolderDialog = true },
+                        onHide = { viewModel.hideSelectedNotes() },
+                        onUnhide = { viewModel.unhideSelectedNotes() }
                     )
                 }
 
@@ -212,6 +219,8 @@ fun NotesListScreen(
                                     }
                                 },
                                 onDelete = { viewModel.deleteNote(note) },
+                                onHide = { viewModel.toggleHideNote(note.id) },
+                                onUnhide = { viewModel.toggleHideNote(note.id) },
                                 folders = folders
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -287,7 +296,9 @@ fun MultiSelectTopBar(
     onClearSelection: () -> Unit,
     onSelectAll: () -> Unit,
     onDelete: () -> Unit,
-    onMove: () -> Unit
+    onMove: () -> Unit,
+    onHide: (() -> Unit)? = null,
+    onUnhide: (() -> Unit)? = null
 ) {
     TopAppBar(
         title = { Text("$selectedCount selected") },
@@ -302,6 +313,16 @@ fun MultiSelectTopBar(
             }
             IconButton(onClick = onMove) {
                 Icon(Icons.Default.DriveFileMove, contentDescription = "Move")
+            }
+            if (onHide != null) {
+                IconButton(onClick = onHide) {
+                    Icon(Icons.Default.VisibilityOff, contentDescription = "Hide")
+                }
+            }
+            if (onUnhide != null) {
+                IconButton(onClick = onUnhide) {
+                    Icon(Icons.Default.Visibility, contentDescription = "Unhide")
+                }
             }
             IconButton(onClick = onDelete) {
                 Icon(
@@ -403,6 +424,8 @@ fun NoteListItem(
     onMove: (Long?) -> Unit,
     onShare: () -> Unit,
     onDelete: () -> Unit,
+    onHide: () -> Unit,
+    onUnhide: () -> Unit,
     folders: List<Folder>,
     modifier: Modifier = Modifier
 ) {
@@ -528,6 +551,14 @@ fun NoteListItem(
                             onDelete = {
                                 showDeleteDialog = true
                                 showContextMenu = false
+                            },
+                            onHide = {
+                                onHide()
+                                showContextMenu = false
+                            },
+                            onUnhide = {
+                                onUnhide()
+                                showContextMenu = false
                             }
                         )
                     }
@@ -615,6 +646,14 @@ fun NoteListItem(
                             tint = MaterialTheme.colorScheme.tertiary
                         )
                     }
+                    if (note.isHidden) {
+                        Icon(
+                            Icons.Default.VisibilityOff,
+                            contentDescription = "Hidden",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
 
                     if (note.folderId != null) {
                         val folderName = folders.find { it.id == note.folderId }?.name
@@ -696,7 +735,9 @@ fun NoteContextMenu(
     onDuplicate: () -> Unit,
     onMove: () -> Unit,
     onShare: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onHide: (() -> Unit)? = null,
+    onUnhide: (() -> Unit)? = null
 ) {
     DropdownMenu(
         expanded = expanded,
@@ -733,6 +774,36 @@ fun NoteContextMenu(
             onClick = onShare,
             leadingIcon = { Icon(Icons.Default.Share, null) }
         )
+
+        // Add hide/unhide option
+        if (onHide != null) {
+            Divider()
+            DropdownMenuItem(
+                text = { Text(if (note.isHidden) "Unhide" else "Hide") },
+                onClick = onHide,
+                leadingIcon = {
+                    Icon(
+                        if (note.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        null
+                    )
+                }
+            )
+        }
+
+        if (onUnhide != null) {
+            Divider()
+            DropdownMenuItem(
+                text = { Text(if (note.isHidden) "Unhide" else "Hide") },
+                onClick = onUnhide,
+                leadingIcon = {
+                    Icon(
+                        if (note.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        null
+                    )
+                }
+            )
+        }
+
         Divider()
         DropdownMenuItem(
             text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
@@ -790,6 +861,7 @@ fun DrawerContent(
     onViewModeChange: (NotesViewModel.ViewMode) -> Unit,
     onCreateFolder: () -> Unit,
     onSettingsClick: () -> Unit,
+    onHiddenNotesClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.padding(16.dp)) {
@@ -822,6 +894,25 @@ fun DrawerContent(
             selected = false,
             onClick = { onViewModeChange(NotesViewModel.ViewMode.FAVORITES) },
             icon = { Icon(Icons.Default.Favorite, null) }
+        )
+        NavigationDrawerItem(
+            label = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Hidden Folder")
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = "Password Protected",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            },
+            selected = false,
+            onClick = onHiddenNotesClick,
+            icon = { Icon(Icons.Default.VisibilityOff, null) }
         )
         
         Spacer(modifier = Modifier.height(16.dp))

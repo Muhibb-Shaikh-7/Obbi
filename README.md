@@ -19,6 +19,7 @@ required.
 ### Core Features
 
 - **📝 Markdown Editor** - Full Markdown support with live preview
+- **✅ Reliable Checklists** - Interactive checkboxes that toggle independently (glitch-free!)
 - **🔗 Bidirectional Links** - Connect notes with `[[Note Title]]` syntax
 - **🔙 Backlink Viewer** - See all notes that reference the current note
 - **📊 Graph View** - Visualize connections between notes
@@ -35,9 +36,30 @@ required.
 - **100% Offline** - Works without any internet connection
 - **Local Storage** - All data stored on your device
 - **End-to-End Encryption** - Optional AES-256 encryption for individual notes
+- **🆕 Hidden Notes** - Privacy-first note hiding with emoji PIN and plausible deniability
 - **No Analytics** - Zero tracking or data collection
 - **No Ads** - Clean, distraction-free experience
 - **Password-Based Encryption** - Protect sensitive notes with strong encryption
+
+### 🆕 Hidden Notes Feature
+
+**The Ultimate Privacy Solution**
+
+- **Emoji PIN** - Secure your hidden notes with a memorable 4-emoji sequence
+- **Plausible Deniability** - Hidden notes disguised as benign categories (Recipes, Shopping, etc.)
+- **Quick Hide** - Instantly lock hidden notes from view
+- **Hardware-Backed Encryption** - Uses Android Keystore for maximum security
+- **No Visible Password UI** - Emoji grid provides security without looking suspicious
+- **Multi-select Hide/Unhide** - Bulk operations for managing private notes
+
+### 🆕 Home Screen Widgets
+
+- **📱 Recent Notes Widget** - View your 5 most recent/pinned notes on home screen
+- **📊 Checklist Progress** - See task completion percentage at a glance
+- **➕ Quick Add Widget** - Compact 1x1 button to create notes instantly
+- **🔗 Deep Links** - Tap any note in widget to open it directly
+- **🌓 Theme-Aware** - Automatically adapts to system light/dark theme
+- **📏 Resizable** - Supports multiple widget sizes
 
 ## 🚀 Quick Start
 
@@ -202,6 +224,105 @@ The toolbar appears at the bottom when editing:
 1. Open the **drawer**
 2. Scroll to the **"Tags"** section
 3. Tap a tag to see all notes with that tag
+
+### 🆕 Using Hidden Notes
+
+#### Why Hidden Notes?
+
+Hidden Notes provides **plausible deniability** for sensitive information. Instead of obviously
+encrypted or password-protected notes, hidden notes appear as benign categories like "Recipes" or "
+Shopping Lists," making them less suspicious if someone else accesses your device.
+
+#### Setting Up Hidden Notes
+
+1. Go to **Settings** (via drawer)
+2. Tap **"Set Up Hidden Notes"**
+3. Choose **4 emojis** as your PIN from the emoji grid
+4. Select a **category disguise** (e.g., "Recipes", "Shopping Lists")
+5. Tap the **checkmark** to complete setup
+
+**Important**: Remember your emoji PIN! There is no recovery option.
+
+#### Hiding Notes
+
+**Single Note:**
+
+1. Long-press a note or tap the **⋮** menu
+2. Select **"Hide"**
+3. The note is instantly hidden and will only appear when unlocked
+
+**Multiple Notes:**
+
+1. Enter **multi-select mode** (long-press a note)
+2. Select multiple notes
+3. Tap the **eye-off icon** (👁️‍🗨️) in the top bar
+4. All selected notes are hidden
+
+#### Viewing Hidden Notes
+
+1. Open the **drawer**
+2. Tap **"Hidden"** under Views
+3. Enter your **4-emoji PIN** in the unlock dialog
+4. Hidden notes are now visible
+
+**Quick Hide**: If someone approaches, simply navigate away from the Hidden view or restart the app
+to automatically lock them again.
+
+#### Unhiding Notes
+
+1. View hidden notes (unlock first)
+2. Long-press or use **multi-select**
+3. Tap **"Unhide"** or the **eye icon** (👁️)
+4. Notes return to normal visibility
+
+#### Security Best Practices
+
+- ✅ Choose emojis that are memorable but not obvious
+- ✅ Use different emojis for each position
+- ✅ Don't share your emoji PIN
+- ✅ Hidden notes don't appear in search when locked
+- ❌ Don't write down your emoji PIN in plain text
+- ❌ Don't use the same emojis for all positions (e.g., "😀😀😀😀")
+
+### 🆕 Using Widgets
+
+#### Adding Widgets to Home Screen
+
+**Recent Notes Widget (4x3):**
+
+1. Long-press on your home screen
+2. Tap **"Widgets"**
+3. Find **"Obbi"**
+4. Drag **"Recent Notes"** widget to home screen
+5. Resize as desired
+
+**Quick Add Widget (1x1):**
+
+1. Follow steps 1-3 above
+2. Drag **"Quick Add"** widget to home screen
+3. Tap the widget anytime to create a note instantly
+
+#### Widget Features
+
+**Recent Notes Widget shows:**
+
+- Your 5 most recent notes (pinned notes appear first)
+- Checklist progress (X/Y tasks • percentage)
+- Quick "+ Add" button for creating notes
+- Pin indicator 📌 on pinned notes
+- Date of last modification
+
+**Tap Behavior:**
+
+- **Tap a note** → Opens that note directly
+- **Tap + Add** → Opens app with new note dialog
+- **Quick Add Widget** → Opens app with new note dialog
+
+#### Widget Updates
+
+- Widgets update automatically every 30 minutes
+- Manual refresh: Remove and re-add the widget
+- Real-time updates when app is open
 
 ### Linking Notes
 
@@ -501,7 +622,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## 🗺️ Roadmap
 
-### Phase 1: Core Features
+### Phase 1: Core Features ✅ COMPLETE
 
 - [x] Basic note CRUD operations
 - [x] Folder organization
@@ -510,7 +631,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - [x] Search functionality
 - [x] Note linking
 
-### Phase 2: Enhanced Editing
+### Phase 2: Enhanced Editing ✅ COMPLETE
 
 - [x] Markdown toolbar
 - [x] Live preview toggle
@@ -518,20 +639,29 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - [x] Undo/Redo
 - [x] Long-press actions
 - [x] Multi-select mode
+- [x] **Checkbox glitch fix** 🆕
 
-### Phase 3: Advanced Features
+### Phase 3: Advanced Features ✅ COMPLETE
 
+- [x] **Hidden notes with emoji PIN** 🆕
+- [x] **Home screen widgets** 🆕
+- [x] **Quick add compact widget** 🆕
+- [x] Note encryption (AES-256)
+- [x] Import/Export (Markdown/JSON)
 - [ ] Nested folders
 - [ ] Note templates
 - [ ] Custom themes
 - [ ] Export to PDF/HTML
 - [ ] Image attachments
 - [ ] Voice notes
-- [ ] Widget support
-- [ ] Backup/restore
 
 ### Phase 4: Power User
 
+- [ ] Widget customization (choose displayed notes)
+- [ ] Knock Code unlock mechanism
+- [ ] Long-press unlock with haptic feedback
+- [ ] Auto-lock for hidden notes after inactivity
+- [ ] Fingerprint/Face unlock integration
 - [ ] Keyboard shortcuts
 - [ ] Vim mode
 - [ ] Split-screen editing

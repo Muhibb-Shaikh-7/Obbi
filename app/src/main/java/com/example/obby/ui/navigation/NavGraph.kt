@@ -12,6 +12,7 @@ import com.example.obby.ui.screens.NoteDetailScreen
 import com.example.obby.ui.screens.NotesListScreen
 import com.example.obby.ui.screens.SettingsScreen
 import com.example.obby.ui.screens.SplashScreen
+import com.example.obby.ui.screens.HiddenNotesScreen
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -22,6 +23,7 @@ sealed class Screen(val route: String) {
 
     object Graph : Screen("graph")
     object Settings : Screen("settings")
+    object HiddenNotes : Screen("hidden_notes")
 }
 
 @Composable
@@ -54,6 +56,9 @@ fun NavGraph(
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onHiddenNotesClick = {
+                    navController.navigate(Screen.HiddenNotes.route)
                 }
             )
         }
@@ -87,6 +92,16 @@ fun NavGraph(
             SettingsScreen(
                 repository = repository,
                 onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.HiddenNotes.route) {
+            HiddenNotesScreen(
+                repository = repository,
+                onNavigateBack = { navController.popBackStack() },
+                onNoteClick = { noteId ->
+                    navController.navigate(Screen.NoteDetail.createRoute(noteId))
+                }
             )
         }
     }

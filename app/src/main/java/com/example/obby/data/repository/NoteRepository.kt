@@ -24,6 +24,18 @@ class NoteRepository(
     // Note operations
     fun getAllNotes(): Flow<List<Note>> = noteDao.getAllNotes()
 
+    /**
+     * Get all notes excluding hidden ones (for main view)
+     */
+    fun getAllNotesExcludingHidden(): Flow<List<Note>> =
+        noteDao.getAllNotes().map { notes -> notes.filter { !it.isHidden } }
+
+    /**
+     * Get only hidden notes (when unlocked)
+     */
+    fun getHiddenNotes(): Flow<List<Note>> =
+        noteDao.getAllNotes().map { notes -> notes.filter { it.isHidden } }
+
     fun getNoteById(noteId: Long): Flow<Note?> = noteDao.getNoteByIdFlow(noteId)
 
     fun getNoteWithDetails(noteId: Long): Flow<NoteWithDetails?> =
@@ -90,6 +102,53 @@ class NoteRepository(
     suspend fun toggleFavoriteNote(noteId: Long) {
         val note = noteDao.getNoteById(noteId) ?: return
         noteDao.updateNote(note.copy(isFavorite = !note.isFavorite))
+    }
+
+    /**
+     * Toggle hidden status of a note
+     */
+    suspend fun toggleHideNote(noteId: Long, categoryAlias: String = "Recipes") {
+        val note = noteDao.getNoteById(noteId) ?: return
+        noteDao.updateNote(
+            note.copy(
+                isHidden = !note.isHidden,
+                hiddenCategoryAlias = if (!note.isHidden) categoryAlias else null
+            )
+        )
+    }
+
+    /**
+     * Hide multiple notes at once
+     */
+    suspend fun hideNotes(noteIds: List<Long>, categoryAlias: String = "Recipes") {
+        noteIds.forEach { noteId ->
+            val note = noteDao.getNoteById(noteId) ?: return@forEach
+            if (!note.isHidden) {
+                noteDao.updateNote(
+                    note.copy(
+                        isHidden = true,
+                        hiddenCategoryAlias = categoryAlias
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * Unhide multiple notes at once
+     */
+    suspend fun unhideNotes(noteIds: List<Long>) {
+        noteIds.forEach { noteId ->
+            val note = noteDao.getNoteById(noteId) ?: return@forEach
+            if (note.isHidden) {
+                noteDao.updateNote(
+                    note.copy(
+                        isHidden = false,
+                        hiddenCategoryAlias = null
+                    )
+                )
+            }
+        }
     }
 
     suspend fun encryptNote(noteId: Long, password: String) {

@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.obby.data.local.dao.FolderDao
 import com.example.obby.data.local.dao.NoteDao
 import com.example.obby.data.local.dao.NoteLinkDao
@@ -18,7 +20,7 @@ import com.example.obby.data.local.entity.*
         NoteTagCrossRef::class,
         NoteLink::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class ObbyDatabase : RoomDatabase() {
@@ -32,6 +34,21 @@ abstract class ObbyDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: ObbyDatabase? = null
 
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add new columns for hidden notes feature
+                database.execSQL(
+                    "ALTER TABLE notes ADD COLUMN isHidden INTEGER NOT NULL DEFAULT 0"
+                )
+                database.execSQL(
+                    "ALTER TABLE notes ADD COLUMN hiddenCategoryAlias TEXT DEFAULT NULL"
+                )
+                database.execSQL(
+                    "ALTER TABLE notes ADD COLUMN encryptedContentIv BLOB DEFAULT NULL"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): ObbyDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -39,7 +56,7 @@ abstract class ObbyDatabase : RoomDatabase() {
                     ObbyDatabase::class.java,
                     "obby_database"
                 )
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(MIGRATION_1_2)
                     .build()
                 INSTANCE = instance
                 instance

@@ -1,3 +1,18 @@
 <resources>
     <string name="app_name">Obby</string>
+
+    <!-- Widget -->
+    <string name="widget_description">Show recent notes from Obbi</string>
+    <string name="quick_add_widget_description">Quick add note button</string>
+
+    <!-- Hidden Notes -->
+    <string name="hidden_notes_unlock_title">Hidden Notes</string>
+    <string name="hidden_notes_setup_title">Set Up Hidden Notes</string>
+    <string name="hidden_notes_emoji_pin_hint">Enter 4-emoji PIN</string>
+    <string name="hidden_notes_category_alias">Category Alias</string>
+    <string name="hidden_notes_category_alias_hint">e.g., Recipes, Shopping</string>
+    <string name="hidden_notes_unlock_button">Unlock</string>
+    <string name="hidden_notes_setup_button">Set Up</string>
+    <string name="hidden_notes_locked">Hidden notes are locked</string>
+    <string name="hidden_notes_invalid_pin">Invalid PIN</string>
 </resources>

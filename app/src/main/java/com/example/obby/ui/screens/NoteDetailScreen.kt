@@ -562,7 +562,7 @@ fun MarkdownPreview(
                                 val span = originalFactory.getSpans(configuration, props)
 
                                 if (span is io.noties.markwon.ext.tasklist.TaskListSpan) {
-                                    // Return array of spans: original span + clickable span
+                                    // Return array of spans: original span + clickable span with larger touch target
                                     arrayOf(
                                         span,
                                         object : android.text.style.ClickableSpan() {
@@ -613,14 +613,20 @@ fun MarkdownPreview(
                 setTextColor(textColor)
                 textSize = 16f
                 setLineSpacing(4f, 1.3f) // Extra space, multiplier
-                setPadding(0, 0, 0, 0)
+                // Increase touch padding for better checkbox accessibility
+                setPadding(0, 8, 0, 8) // Add vertical padding for easier tapping
                 layoutParams = android.view.ViewGroup.LayoutParams(
                     android.view.ViewGroup.LayoutParams.MATCH_PARENT,
                     android.view.ViewGroup.LayoutParams.WRAP_CONTENT
                 )
+                // Increase minimum height to ensure 48dp touch target
+                minHeight = (48 * resources.displayMetrics.density).toInt()
                 // Set movement method to enable clickable spans
                 if (onCheckboxToggled != null) {
                     movementMethod = android.text.method.LinkMovementMethod.getInstance()
+                    // Improve touch slop for easier checkbox clicking
+                    isClickable = true
+                    isFocusable = true
                 }
             }
         },
@@ -642,7 +648,7 @@ private fun toggleCheckboxInMarkdown(
     renderedText: android.text.Spanned,
     clickedSpan: io.noties.markwon.ext.tasklist.TaskListSpan
 ): String {
-    // Find all checkboxes in the markdown
+    // Find all checkboxes in the markdown with their positions
     val checkboxPattern = Regex("- \\[([ xX])\\]")
     val matches = checkboxPattern.findAll(markdown).toList()
 
@@ -653,8 +659,26 @@ private fun toggleCheckboxInMarkdown(
         io.noties.markwon.ext.tasklist.TaskListSpan::class.java
     )
 
-    // Find the index of the clicked span
-    val spanIndex = spans.indexOf(clickedSpan)
+    // Find the index of the clicked span by finding its text position in the rendered content
+    // This is more robust than using array index comparison
+    val clickedSpanStart = renderedText.getSpanStart(clickedSpan)
+    val clickedSpanEnd = renderedText.getSpanEnd(clickedSpan)
+
+    // Count how many TaskListSpan instances appear before this one
+    var spanIndex = 0
+    for (span in spans) {
+        val spanStart = renderedText.getSpanStart(span)
+        val spanEnd = renderedText.getSpanEnd(span)
+
+        if (spanStart == clickedSpanStart && spanEnd == clickedSpanEnd && span === clickedSpan) {
+            // Found the exact span
+            break
+        }
+
+        if (spanStart < clickedSpanStart) {
+            spanIndex++
+        }
+    }
 
     if (spanIndex >= 0 && spanIndex < matches.size) {
         val match = matches[spanIndex]
